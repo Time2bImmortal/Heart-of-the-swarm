@@ -268,34 +268,43 @@ def scale_radius(y):
     else:
         return int(1 + (y - 85) * (60 - 1) / (230 - 85))
 
-def find_drawing_points(fgmask):
+
+def scale_area_threshold(y, height):
+    if y < 90:
+        return 10
+    else:
+        return 18*y-1760  # threshold is 10 at 85 and 3000 at 230
+
+    # return scaled_threshold
+
+def find_centroids(fgmask, height, previous_centroids, distance_threshold=10):
     contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    drawing_points = []  # This will store tuples of (point_x, point_y)
+    new_centroids = []  # To store tuples of (centroid_x, centroid_y, radius)
 
     for contour in contours:
-        if cv2.contourArea(contour) > 10:  # Considering contours larger than 10
-            x, y, w, h = cv2.boundingRect(contour)
-            point_x = x + w // 2
-            point_y = y + h // 2
-            drawing_points.append((point_x, point_y))
+        M = cv2.moments(contour)
+        if M['m00'] != 0:
+            cX = int(M['m10'] / M['m00'])
+            cY = int(M['m01'] / M['m00'])
+            # Initial assumption: the centroid will not be included
+            include_centroid = False
+            calculated_radius = scale_radius(cY)  # Calculate the radius based on the current centroid's y-coordinate
+            for prev_cX, prev_cY, prev_radius in previous_centroids:
+                # If the current centroid is close to a previous one, it will be included regardless of its area
+                if np.linalg.norm(np.array([cX, cY]) - np.array([prev_cX, prev_cY])) < distance_threshold:
+                    new_centroids.append((cX, cY, prev_radius))  # Use the previous radius
+                    include_centroid = True
+                    break  # Stop checking other centroids once a close one is found
+            # If the centroid is not close to any previous ones, check against the scale threshold
+            if not include_centroid and cv2.contourArea(contour) > scale_area_threshold(cY, height):
+                new_centroids.append((cX, cY, calculated_radius))  # Use the calculated radius
 
-    return drawing_points
-def find_centroids(fgmask):
-    contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    centroids = []  # This will store tuples of (centroid_x, centroid_y)
-
-    for contour in contours:
-        if cv2.contourArea(contour) > 10:  # Considering contours larger than 10
-            M = cv2.moments(contour)
-            if M['m00'] != 0:
-                cX = int(M['m10'] / M['m00'])
-                cY = int(M['m01'] / M['m00'])
-                centroids.append((cX, cY))
-
-    return centroids
+    return new_centroids
 
 
 def replace_objects_with_dots(video_path, background_video_path):
+    previous_centroids = []  # Format: [(centroid_x, centroid_y, radius)]
+
     cap_video = cv2.VideoCapture(video_path)
     cap_background = cv2.VideoCapture(background_video_path)
 
@@ -314,19 +323,17 @@ def replace_objects_with_dots(video_path, background_video_path):
         if not ret_video or not ret_background:
             break
 
-        # Subtract the background from the video frame
         fgmask = cv2.absdiff(frame_video, frame_background)
         fgmask_gray = cv2.cvtColor(fgmask, cv2.COLOR_BGR2GRAY)
-        fgmask = apply_dynamic_processing(fgmask_gray, height)
+        fgmask = apply_dynamic_processing(fgmask_gray, height)  # Assuming this is a custom function you've defined
 
-        centroids = find_centroids(fgmask)
+        centroids = find_centroids(fgmask, height, previous_centroids)
         background_copy = frame_background.copy()
 
-        # Draw black dots on the background copy, scaling based on the y-coordinate
-        for (cX, cY) in centroids:
-            radius = scale_radius(cY)  # Apply scaling here based on the y-coordinate
-            cv2.circle(background_copy, (cX, cY), radius, (0, 0, 0), -1)  # -1 fills the circle
+        for (cX, cY, radius) in centroids:
+            cv2.circle(background_copy, (cX, cY), radius, (0, 0, 0), -1)  # Draw with adjusted or previous radius
 
+        previous_centroids = centroids.copy()
         out.write(background_copy)
 
     cap_video.release()
