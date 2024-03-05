@@ -4,6 +4,31 @@ import cv2
 import os
 import numpy as np
 from sklearn.cluster import DBSCAN
+
+"""video trimmering"""
+# from moviepy.editor import VideoFileClip, clips_array, concatenate_videoclips
+#
+# # Load the video
+# video = VideoFileClip(r"D:\videos_locusts\crop.mp4")
+#
+# # First segment: normal video from 0 to 14 seconds
+# first_segment = video.subclip(0, 14)
+#
+# # Second segment: from 7 to 14 seconds and then 0 to 7 seconds
+# second_segment_part1 = video.subclip(7, 14)
+# second_segment_part2 = video.subclip(0, 7)
+# second_segment = concatenate_videoclips([second_segment_part1, second_segment_part2])
+#
+# # Resize videos to half their width
+# first_segment_resized = first_segment.resize(width=first_segment.size[0]/2)
+# second_segment_resized = second_segment.resize(width=second_segment.size[0]/2)
+#
+# # Create an array with the two segments side by side
+# final_clip = clips_array([[first_segment_resized, second_segment_resized]])
+#
+# # Write the result to a file
+# final_clip.write_videofile(r'D:\videos_locusts\unsynchronized_trimmed_crop.mp4', codec='libx264', audio=False)
+
 def cut_video(video_path, duration_seconds):
     """
     Cuts the video to the specified duration and saves the output in the same directory.
