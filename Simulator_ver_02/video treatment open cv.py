@@ -7,15 +7,16 @@ from sklearn.cluster import DBSCAN
 
 """video trimmering"""
 # from moviepy.editor import VideoFileClip, clips_array, concatenate_videoclips
-#
-# # Load the video
-# video = VideoFileClip(r"D:\videos_locusts\crop.mp4")
-#
-# # First segment: normal video from 0 to 14 seconds
-# first_segment = video.subclip(0, 14)
-#
-# # Second segment: from 7 to 14 seconds and then 0 to 7 seconds
-# second_segment_part1 = video.subclip(7, 14)
+
+# Load the video
+# video = VideoFileClip(r"C:\Users\yfant\OneDrive\Desktop\dots_locusts.avi")
+
+# First segment: normal video from 0 to 14 seconds
+# first_segment = video.subclip(0, 13.966)
+
+# Second segment: from 7 to 14 seconds and then 0 to 7 seconds
+
+# second_segment_part1 = video.subclip(7, 13.966)
 # second_segment_part2 = video.subclip(0, 7)
 # second_segment = concatenate_videoclips([second_segment_part1, second_segment_part2])
 #
@@ -27,7 +28,7 @@ from sklearn.cluster import DBSCAN
 # final_clip = clips_array([[first_segment_resized, second_segment_resized]])
 #
 # # Write the result to a file
-# final_clip.write_videofile(r'D:\videos_locusts\unsynchronized_trimmed_crop.mp4', codec='libx264', audio=False)
+# final_clip.write_videofile(r'D:\unsynchronized_trimmed_dots_locusts.avi', codec='libx264', audio=False)
 
 def cut_video(video_path, duration_seconds):
     """
@@ -46,11 +47,11 @@ def cut_video(video_path, duration_seconds):
     fps = cap.get(cv2.CAP_PROP_FPS)
 
     # Calculate frame limit based on duration and fps
-    frame_limit = int(duration_seconds * fps)
+    frame_limit = int(duration_seconds * fps)+1
 
     # Prepare output path
     video_dir = os.path.dirname(video_path)
-    output_filename = "cut_video.avi"
+    output_filename = "cut_video_crop.avi"
     output_path = os.path.join(video_dir, output_filename)
 
     # Setup VideoWriter to save the output
@@ -59,7 +60,7 @@ def cut_video(video_path, duration_seconds):
 
     frame_count = 0
 
-    while cap.isOpened() and frame_count < frame_limit:
+    while cap.isOpened() and frame_count <= frame_limit:
         ret, frame = cap.read()
         if ret:
             out.write(frame)
@@ -146,7 +147,7 @@ def extract_and_show_background(video_path, return_result=False, iterations=10):
                 break  # Break the loop if there are no more frames
 
             # Apply the background subtractor to the part of the frame above 80 pixels
-            backSub.apply(frame[80:, :], learningRate=0.01)
+            backSub.apply(frame[225:, :], learningRate=0.01)
 
     # After refining the model, create the background video
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -159,7 +160,7 @@ def extract_and_show_background(video_path, return_result=False, iterations=10):
         background = backSub.getBackgroundImage()
         if background is not None:
             # Combine the original part below 80 pixels with the background part above 80 pixels
-            combined_frame = np.vstack((frame[:80, :], background))
+            combined_frame = np.vstack((frame[:225, :], background))
 
             # Write the combined frame to the output video
             out.write(combined_frame)
@@ -261,8 +262,9 @@ def apply_dynamic_processing(fgmask_gray, height):
     result_mask = np.zeros_like(fgmask_gray)
 
     # Loop through each row from the specified start Y-coordinate to the bottom of the image
-    start_y = 80  # Starting point for dynamic processing
+    start_y = 90  # Starting point for dynamic processing
     for y in range(start_y, height):
+
         # Calculate dynamic parameters based on Y-coordinate
         factor = ((y - start_y) / (height - start_y))
         blur_kernel_size = max(5, int(5 + factor * 15)) | 1  # Ensure the kernel size is odd
@@ -285,43 +287,38 @@ def apply_dynamic_processing(fgmask_gray, height):
     return result_mask
 
 
-def scale_radius(y):
-    if y < 85:
-        return 1  # Minimum size
-    elif y > 230:
-        return 90  # Maximum size roughly
-    else:
-        return int(1 + (y - 85) * (60 - 1) / (230 - 85))
+def scale_radius_and_threshold(y):
 
+    radius = int(3 + (40 - 3) * (y - 90) / (272 - 90))
+    threshold = int(10 + (2300 - 10) * (y - 90) / (272 - 90))
 
-def scale_area_threshold(y, height):
-    if y < 90:
-        return 10
-    else:
-        return 18*y-1760  # threshold is 10 at 85 and 3000 at 230
+    return radius, threshold
 
-    # return scaled_threshold
-
-def find_centroids(fgmask, height, previous_centroids, distance_threshold=10):
+def find_centroids(fgmask, previous_centroids, distance_threshold=5, min_contour_area=5):
     contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     new_centroids = []  # To store tuples of (centroid_x, centroid_y, radius)
 
     for contour in contours:
+        # Skip contours that are too small
+        if cv2.contourArea(contour) < min_contour_area:
+            continue
+
         M = cv2.moments(contour)
         if M['m00'] != 0:
             cX = int(M['m10'] / M['m00'])
             cY = int(M['m01'] / M['m00'])
-            # Initial assumption: the centroid will not be included
-            include_centroid = False
-            calculated_radius = scale_radius(cY)  # Calculate the radius based on the current centroid's y-coordinate
+            calculated_radius, area_threshold = scale_radius_and_threshold(cY)  # Calculate both radius and threshold based on y-coordinate
+
+            # Check against all previous centroids for proximity
+            close_to_previous = False
             for prev_cX, prev_cY, prev_radius in previous_centroids:
-                # If the current centroid is close to a previous one, it will be included regardless of its area
                 if np.linalg.norm(np.array([cX, cY]) - np.array([prev_cX, prev_cY])) < distance_threshold:
                     new_centroids.append((cX, cY, prev_radius))  # Use the previous radius
-                    include_centroid = True
-                    break  # Stop checking other centroids once a close one is found
-            # If the centroid is not close to any previous ones, check against the scale threshold
-            if not include_centroid and cv2.contourArea(contour) > scale_area_threshold(cY, height):
+                    close_to_previous = True
+                    break  # Stop checking once a close previous centroid is found
+
+            # If not close to any previous centroid, then check against the area threshold
+            if not close_to_previous and cv2.contourArea(contour) > area_threshold:
                 new_centroids.append((cX, cY, calculated_radius))  # Use the calculated radius
 
     return new_centroids
@@ -352,7 +349,7 @@ def replace_objects_with_dots(video_path, background_video_path):
         fgmask_gray = cv2.cvtColor(fgmask, cv2.COLOR_BGR2GRAY)
         fgmask = apply_dynamic_processing(fgmask_gray, height)  # Assuming this is a custom function you've defined
 
-        centroids = find_centroids(fgmask, height, previous_centroids)
+        centroids = find_centroids(fgmask, previous_centroids)
         background_copy = frame_background.copy()
 
         for (cX, cY, radius) in centroids:
@@ -367,23 +364,97 @@ def replace_objects_with_dots(video_path, background_video_path):
     cv2.destroyAllWindows()
 
     print(f"Output saved to {output_path}")
+def process_video(video_path, background_video_path, threshold_value=127):
+    """ Subtract background, process isolated moving objects, and overlay onto the original background. """
+    cap_video = cv2.VideoCapture(video_path)
+    cap_background = cv2.VideoCapture(background_video_path)
+    if not cap_video.isOpened() or not cap_background.isOpened():
+        print("Failed to open video files.")
+        return
 
+    video_dir, video_name = os.path.split(video_path)
+    output_path = os.path.join(video_dir, f"final_overlay_{threshold_value}_{video_name}")
+    width = int(cap_video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap_video.get(cv2.CAP_PROP_FPS)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    while True:
+        ret_video, frame_video = cap_video.read()
+        ret_background, frame_background = cap_background.read()
+        if not ret_video or not ret_background:
+            break
+
+        # Subtract background from video to isolate moving objects
+        fgmask = cv2.absdiff(frame_video, frame_background)
+        fgmask_gray = cv2.cvtColor(fgmask, cv2.COLOR_BGR2GRAY)
+
+        # Apply threshold to create black and white image of moving objects
+        _, fgmask_thresh = cv2.threshold(fgmask_gray, threshold_value, 255, cv2.THRESH_BINARY)
+
+        # Invert the threshold so that moving objects are black
+        fgmask_inverted = cv2.bitwise_not(fgmask_thresh)
+
+        # Create a version of the background with holes where the moving objects are
+        background_holes = cv2.subtract(frame_background, cv2.cvtColor(fgmask_thresh, cv2.COLOR_GRAY2BGR))
+
+        # Convert inverted mask back to color space for combining
+        fgmask_inverted_color = cv2.cvtColor(fgmask_inverted, cv2.COLOR_GRAY2BGR)
+
+        # Use the inverted mask as a mask to copy only the black parts
+        final_frame = background_holes.copy()
+        mask = fgmask_inverted == 0  # This creates a mask where black parts are True
+        final_frame[mask] = fgmask_inverted_color[mask]  # Only copy where the mask is True
+
+        out.write(final_frame)
+
+    cap_video.release()
+    cap_background.release()
+    out.release()
+    print(f"Processed video saved to {output_path}")
+
+
+def total_black_pixels_in_video(video_path):
+    """ Calculate the total number of black pixels in all frames of a video directly from RGB/BGR data. """
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error opening video file.")
+        return None
+
+    total_black_pixels = 0
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Count black pixels: black pixels are where all three RGB/BGR channels are 0
+        black_pixels = np.sum(np.all(frame == [0, 0, 0], axis=2))
+        total_black_pixels += black_pixels
+
+    cap.release()
+    return total_black_pixels
 # Prevent the root window from appearing
 Tk().withdraw()
+# #
+if __name__ == "__main__":
 
-# Open a dialog to choose a file
-# video_path = askopenfilename()  # video path
+    video_path = askopenfilename(title="choose a video")  # video path
+    # background_video = askopenfilename(title="choose a background")
 
+    # dots_video_path = askopenfilename(title="Choose a dots video")
+# cut_video(video_path,15)
+# # # draw_coordinates_on_video(video_path)
 # print(f'Selected file: {video_path}')
 # background_video_path = extract_and_show_background(video_path, True)
-video_path = fr"C:\Users\yfant\OneDrive\Desktop\cut_video.avi"
-background_video_path = fr"C:\Users\yfant\OneDrive\Desktop\cut_video_background.avi"
-if background_video_path is not None:
-
-    replace_objects_with_dots(video_path, background_video_path)
-    # comparing_background_subtraction(videopath,background)
-    # save_fgmask_video(video_path, background_video_path)
-
-
+# video_path = fr"D:\cut_video_crop.avi"
+    background_video_path = fr"C:\Users\yfant\OneDrive\Desktop\master\cut_video_background.avi"
+#     print("total black pixels in dots", total_black_pixels_in_video(dots_video_path))
+    print("dots total black pixels in video :", total_black_pixels_in_video(video_path))
+#     process_video(video_path, background_video_path, 60)
+    # replace_objects_with_dots(video_path, background_video_path)
+#       comparing_background_subtraction(videopath,background)
+#     save_fgmask_video(video_path, background_video_path)
 
 

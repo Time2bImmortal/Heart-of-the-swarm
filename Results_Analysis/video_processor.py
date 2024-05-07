@@ -5,7 +5,7 @@ import tkinter as tk  # GUI (graphic users interface) great for handling paths
 from tkinter import filedialog
 from threading import Thread, Event  # Concurrency
 import subprocess  # Terminal Communication
-import cv2  # Video Processing
+import cv2 # Video Processing
 import pandas as pd  # Data Handling / CheckPoint
 import json
 import re  # String Handling

@@ -1,6 +1,6 @@
 P = {
     "video_processor_params": {
-        'trial_dict': {"OPEN-LOOP": (1, "O"), "IN-PHASE": (2, "I"), "OUT-OF-PHASE": (3, "P"), "ALTERNATE": (4, "A")}, # "ALTERNATE": (4, "A")
+        'trial_dict': {"OPEN-LOOP": (1, "O"), "IN-PHASE": (2, "I"), "OUT-OF-PHASE": (3, "P"), "ALTERNATE": (4, "A"), "VIDEO": (5, "V"), "DOTS": (6, "D")}, # "ALTERNATE": (4, "A")
         'trial_dict_2': {'FORWARD': (1, 'F'), 'BACKWARD': (2, 'B')},
         'experiment_name': 'Peer recognition experiment',
         'convert_params': ['.MP4', '.avi', '25', '1280x720', '5000k'],  # source extension, format to convert, frames, resolution, bitmaps

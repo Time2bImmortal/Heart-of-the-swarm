@@ -46,8 +46,8 @@ if __name__ == "__main__":
     # video_processor.save_parameters_to_file()
     # folder_name = video_processor.get_experiment_folder_path()
     # folder_name = filedialog.askdirectory()
-    #
-    # """Irrelevant, rename videos"""
+
+    """Irrelevant, rename videos"""
     # video_renamer = vp.VideoRenamer(folder_name, video_params["trial_dict"], video_params["trial_dict_2"],
     #                                 video_params["start_num_video"], video_params['convert_params'][1])
     # video_renamer.open_video_thread()

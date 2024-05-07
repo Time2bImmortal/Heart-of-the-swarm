@@ -7,7 +7,7 @@ from scipy.stats import mannwhitneyu, kruskal, fligner  # Stats
 import scikit_posthocs as sp
 import logging  # avoid useless warning of matplotlib by rising the warning level
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
-from brokenaxes import brokenaxes
+# from brokenaxes import brokenaxes
 """
 This module contains two primary classes, each with its distinct responsibility:
 
