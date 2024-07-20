@@ -71,7 +71,6 @@ if __name__ == "__main__":
     manipulator = fe.DataManipulator(ref_params['delimitation_flags'], ref_params['delimitations_list'],
                                      video_params['trial_dict'], video_params['trial_dict_2'])
     manipulator.choose_folder()
-    #
     # # Calculator: Compute and extract features
     features_calculator = fe.Calculator()
     features_calculator.get_parameters(res_params["axis_rotation_threshold"], res_params["radian_range"],

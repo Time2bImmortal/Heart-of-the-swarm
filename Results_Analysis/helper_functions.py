@@ -153,3 +153,87 @@ def plot_xyz_from_csv(column_names, axis_rotation_threshold=[0.02, 0.02, 0.02]):
     ax[2].set_xlabel('Frames')
     fig.tight_layout()
     plt.show()
+
+import os
+from tkinter import Tk
+from tkinter.filedialog import askdirectory
+import re
+
+def rename_csv_files(folder_path, suffix):
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.csv'):
+            match = re.match(r'(.*[A-Z]_)(.*)', filename)
+            if match:
+                part1 = match.group(1)  # This is the part up to and including the 'O_', 'S_', or 'C_'
+                part2 = match.group(2)  # This is the rest of the filename
+                new_name = part1 + suffix + part2
+                os.rename(os.path.join(folder_path, filename), os.path.join(folder_path, new_name))
+                print(f'Renamed: {filename} to {new_name}')
+
+def main():
+    Tk().withdraw()  # Prevents Tkinter window from appearing
+    folder_path = askdirectory(title='Select Folder Containing .csv Files')
+    if not folder_path:
+        print('No folder selected. Exiting...')
+        return
+
+    suffix_choice = input('Enter suffix to add ("F_" or "B_"): ').strip()
+    if suffix_choice not in ["F_", "B_"]:
+        print('Invalid suffix. Please enter "F_" or "B_".')
+        return
+
+    rename_csv_files(folder_path, suffix_choice)
+    print('Renaming completed.')
+
+
+import os
+import pandas as pd
+
+
+def process_csv_files(folder_path):
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(folder_path, filename)
+            df = pd.read_csv(file_path)
+
+            if df.shape[1] < 25:
+                print(f"Skipping {filename} as it has less than 25 columns.")
+                continue
+
+            col_index = 25 # 25th column (index starts from 0)
+            df.rename(columns={df.columns[col_index]: 'markers'}, inplace=True)
+            # Find the index of the row with 999 in the 25th column
+            index_999 = df[df.iloc[:, col_index] == 999].index
+            if len(index_999) == 0:
+                print(f"No 999 found in column 25 of {filename}.")
+                continue
+
+            index_999 = index_999[0]
+            df.iloc[index_999, col_index] = 222
+
+            # Insert 111 at 1500 lines before 222 or the first line if less than 1500 lines before
+            if index_999 >= 1500:
+                df.iloc[index_999 - 1500, col_index] = 111
+            else:
+                df.iloc[0, col_index] = 111
+
+            # Insert 999 at 1500 lines after 222
+            if index_999 + 1500 < len(df):
+                df.iloc[index_999 + 1500, col_index] = 999
+
+            # Insert 000 at 1000 lines after the last 999
+            index_new_999 = index_999 + 1500
+            if index_new_999 + 1000 < len(df):
+                df.iloc[index_new_999 + 1000, col_index] = 000
+
+            # Save the modified DataFrame back to the CSV file
+            df.to_csv(file_path, index=False)
+            print(f"Processed {filename}.")
+
+
+# Usage
+folder_path = askdirectory(title='Select Folder Containing .csv Files')
+print(folder_path)
+process_csv_files(folder_path)
+
+

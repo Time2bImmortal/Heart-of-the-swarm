@@ -129,7 +129,7 @@ class Plotter:
     def apply_lateral_mean_deduction(self, trial_type_directory, mode='mean'):
         valid_files = [filename for filename in os.listdir(trial_type_directory)
                        if filename.endswith(".csv") and filename != "computation_summary.csv"]
-
+        print(valid_files)
         if not valid_files:
             print("No valid files found.")
             return

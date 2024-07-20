@@ -1,4 +1,6 @@
 import os  # OS operations
+import sys
+
 import pandas as pd  # Data Handling
 import numpy as np
 import tkinter as tk  # GUI (graphic users interface) great for handling paths
@@ -47,12 +49,16 @@ class DataManipulator:
 
     def _process_paths(self, paths):
         for path in paths:
+            print(f"Processing path: {path}")
             base_name = os.path.basename(path)
             base_dir = os.path.dirname(path)  # Get the directory of the path
 
             result_dir = os.path.join(base_dir, base_name.replace('marked', 'sliced'))
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
+                print(f"Created result directory: {result_dir}")
+            else:
+                print(f"Result directory already exists: {result_dir}")
             self.result_directories.append(result_dir)
 
             if os.path.isdir(path):  # Separate the keys for trial_dict and trial_dict_2
@@ -107,7 +113,6 @@ class DataManipulator:
         data_slice.columns = [str(i + 1) for i in range(data_slice.shape[1])]
         data_slice = data_slice.reset_index(drop=True)
         data_slice.index = data_slice.index + 1
-
         data_slice.to_csv(output_path, index=True)
 
     @staticmethod
@@ -136,6 +141,7 @@ class Calculator:
         self.column_mapping = column_mapping
 
     def pre_process_data(self, df):
+
         if self.column_mapping:
             df = df.rename(columns=self.column_mapping)
 
@@ -196,23 +202,20 @@ class Calculator:
 
     @staticmethod
     def calculate_walking_fraction(df):
+
         # Algorithm to extract the proportion of walking activity
         df['is_walking'] = (df['x'] != 0.0) | (df['z'] != 0.0)
         chunk_starts = df.index[df['is_walking'] & ~df['is_walking'].shift(1).fillna(False)].tolist()
         chunk_ends = df.index[df['is_walking'] & ~df['is_walking'].shift(-1).fillna(False)].tolist()
-
         total_size = sum(end - start + 1 for start, end in zip(chunk_starts, chunk_ends) if (end - start + 1) >= 10)  # Filter chunks by size and compute total size
-
         return total_size / len(df)  # Return walking fraction
 
     @staticmethod
     def calculate_pauses_and_average_duration(df):
         # Algorithm to extract the number of pauses and the average time paused
         df['is_paused'] = (df['x'] == 0.0) & (df['z'] == 0.0)
-
         chunk_starts = df.index[df['is_paused'] & ~df['is_paused'].shift(1).fillna(False)].tolist() # looking for current row is True and the previous False (start pause)
         chunk_ends = df.index[df['is_paused'] & ~df['is_paused'].shift(-1).fillna(False)].tolist() # end pause
-
         i, valid_chunks = 0, []
         while i < len(chunk_starts): # close small gaps that cant be walking
             start = chunk_starts[i]

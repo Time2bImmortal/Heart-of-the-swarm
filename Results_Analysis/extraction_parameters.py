@@ -1,8 +1,8 @@
 P = {
     "video_processor_params": {
-        'trial_dict': {"OPEN-LOOP": (1, "O"), "IN-PHASE": (2, "I"), "OUT-OF-PHASE": (3, "P"), "ALTERNATE": (4, "A"), "VIDEO": (5, "V"), "DOTS": (6, "D")}, # "ALTERNATE": (4, "A")
+        'trial_dict': {"OPEN-LOOP": (1, "O"), "IN-PHASE": (2, "C"), "OUT-OF-PHASE": (3, "S") }, #"ALTERNATE": (4, "A"), "VIDEO": (5, "V"), "DOTS": (6, "D")}, # "ALTERNATE": (4, "A")
         'trial_dict_2': {'FORWARD': (1, 'F'), 'BACKWARD': (2, 'B')},
-        'experiment_name': 'Peer recognition experiment',
+        'experiment_name': 'OpenClosedLoop',
         'convert_params': ['.MP4', '.avi', '25', '1280x720', '5000k'],  # source extension, format to convert, frames, resolution, bitmaps
         'start_num_video': 1,
         'fictrac_directory': "C://Users/scr/vcpkg/fictrac/bin/Release",
@@ -23,7 +23,7 @@ P = {
             "column_mapping": {'5': 'x', '7': 'z', '14': 'dis_x', '15': 'dis_y'}
     },
     "plots_and_stats": {
-        "color_palette": [(218 / 255, 207 / 255, 79 / 255), (192 / 255, 0 / 255, 0 / 255)],
+        "color_palette": [(221 / 255, 227 / 255, 77 / 255), (147 / 255, 162 / 255, 72 / 255)],
         "features_to_plot": ['walking_fraction', 'average_pause_duration [s]', r'relative_speed [cm.s-1]', 'number_of_pauses',
                              'lateral_proportion_25_degree', 'lateral_proportion_45_degree', 'distance_walked [cm]'],
         'paired_subjects': True
